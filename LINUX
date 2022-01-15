@@ -1,0 +1,327 @@
+#varezehg, Arezehgar, Valareza, 501020437, 1
+#!/bin/bash
+
+
+#helper functions
+
+#checks if any values repeat in the given file
+#$1 - file to check for repetition
+repeatChecker () ( 
+    local fileA="$1"
+    typeset -i c=1
+    while read lineTemp; do
+
+        if [ $c -ge 2 ] ; then
+            fa=`echo $lineTemp | cut -d' ' -f1`
+            fb=`echo $lineTemp | cut -d' ' -f2`
+            fc=`echo $lineTemp | cut -d' ' -f3`
+            fd=`echo $lineTemp | cut -d' ' -f4`
+            fe=`echo $lineTemp | cut -d' ' -f5`
+
+            if [ `tail -5 $fileA | grep $fa | wc -l` -gt 1 ] ; then
+                echo `NO`
+                break
+            elif [ `tail -5 $fileA | grep $fb | wc -l` -gt 1 ] ; then
+                echo "NO2"
+                break
+            elif [ `tail -5 $fileA | grep $fc | wc -l` -gt 1 ] ; then
+                echo "NO3"
+                break
+            elif [ `tail -5 $fileA | grep $fd | wc -l` -gt 1 ] ; then
+                echo "NO4"
+                break
+            elif [ `tail -5 $fileA | grep $fe | wc -l` -gt 1 ] ; then
+                echo "NO5"
+                break
+            fi
+        fi
+        c=c+1
+    done < $fileA
+    unset c
+)
+
+#updates a given file argument with the correct LINUX format
+#$1 - file to update
+update() (
+    typeset -i c=1
+    local fileA="$1"
+    while read line; do    
+        if [ $c = 4 ] ; then
+            fa=`echo $line | cut -d' ' -f1`
+            fb=`echo $line | cut -d' ' -f2`
+            fc=`echo $line | cut -d' ' -f3`
+            fd=`echo $line | cut -d' ' -f4`
+            fe=`echo $line | cut -d' ' -f5`
+            echo -e "$fa\t$fb\t${fc}m\t$fd\t$fe"  
+        elif [ $c -gt 1 ] ; then
+            fa=`echo $line | cut -d' ' -f1`
+            fb=`echo $line | cut -d' ' -f2`
+            fc=`echo $line | cut -d' ' -f3`
+            fd=`echo $line | cut -d' ' -f4`
+            fe=`echo $line | cut -d' ' -f5`
+            echo -e "$fa\t$fb\t$fc\t$fd\t$fe"    
+        else
+            echo -e "L\tI\tN\tU\tX"
+        fi
+        c=c+1
+    done < $fileA
+)
+
+#Assigns a letter to a number based on given ranges
+#$1 - the number to assign to a letter
+assignToLetter() (
+    typeset -i randInt="$1"
+
+    if [ $randInt -ge 1 -a $randInt -le 9 ] ; then
+        echo "L0$randInt"
+    elif [ $randInt -ge 10 -a $randInt -le 15 ] ; then
+        echo "L$randInt"
+    elif [ $randInt -ge 16 -a $randInt -le 30 ] ; then
+        echo "I$randInt"
+    elif [ $randInt -ge 31 -a $randInt -le 45 ] ; then
+        echo "N$randInt"
+    elif [ $randInt -ge 46 -a $randInt -le 60 ] ; then
+        echo "U$randInt"
+    elif [ $randInt -ge 61 -a $randInt -le 75 ] ; then
+        echo "X$randInt"
+    fi
+    unset randInt
+)
+
+#searches for a given number within a given file
+#$1 - the file to search in
+#$2 - the number to search for
+searchFor() (
+    local file="$1"
+    local n="$2"
+    touch temporary_searchFor
+    declare -i c=1
+    while read line; do
+        if [ $c -ge 2 ] ; then
+
+            local fa=`echo "$line" | cut -f1`
+            local fb=`echo "$line" | cut -f2`
+            local fc=`echo "$line" | cut -f3`
+            local fd=`echo "$line" | cut -f4`
+            local fe=`echo "$line" | cut -f5`
+
+            if [ `echo "$line" | cut -c1` = 0 -a `echo "$line" | cut -c2` = "$n" ] ; then
+                echo -e "${fa}m\t${fb}\t${fc}\t${fd}\t${fe}" >> temporary_searchFor
+            elif [ `echo "$line" | cut -f1` = "$n" ] ; then
+                echo -e "${fa}m\t${fb}\t${fc}\t${fd}\t${fe}" >> temporary_searchFor
+            elif [ `echo "$line" | cut -f2` = "$n" ] ; then
+                echo -e "${fa}\t${fb}m\t${fc}\t${fd}\t${fe}" >> temporary_searchFor
+
+            elif [ `echo "$line" | cut -f3` = "$n" ] ; then
+                echo -e "${fa}\t${fb}\t${fc}m\t${fd}\t${fe}" >> temporary_searchFor
+
+            elif [ `echo "$line" | cut -f4` = "$n" ] ; then
+                echo -e "${fa}\t${fb}\t${fc}\t${fd}m\t${fe}" >> temporary_searchFor
+
+            elif [ `echo "$line" | cut -f5` = "$n" ] ; then
+                echo -e "${fa}\t${fb}\t${fc}\t${fd}\t${fe}m" >> temporary_searchFor
+            else 
+                echo "$line" >> temporary_searchFor
+            fi
+        else 
+            echo "$line" >> temporary_searchFor
+        fi
+        c=c+1
+    done < "$file"
+        cat temporary_searchFor > $file
+        rm temporary_searchFor
+)
+
+#Checks all the rows in a given file to see if any row is completely marked
+#$1 - file to check
+checkIfWinRows() (
+    local file="$1"
+    declare -i c=1
+    while read line; do
+        if [ $c -gt 1 ] ; then
+            if [ ! -z "`echo $line | grep "^..*m..*m..*m..*m..*m$"`" ] ; then
+                echo "WIN"
+            fi
+        fi
+        c=c+1
+    done < $file
+    
+)
+
+#Checks all the columns in a given file to see if any column is completely marked
+#$1 - file to check
+checkIfWinColumns() {
+    local file="$1"
+    declare -i c=1
+    declare -a column1
+    declare -a column2
+    declare -a column3
+    declare -a column4
+    declare -a column5
+
+    while read line ; do
+        if [ $c -gt 1 ] ; then
+            column1=(${column1[@]} `echo "$line" | cut -f1`)
+            column2=(${column2[@]} `echo "$line" | cut -f2`)
+            column3=(${column3[@]} `echo "$line" | cut -f3`)
+            column4=(${column4[@]} `echo "$line" | cut -f4`)
+            column5=(${column5[@]} `echo "$line" | cut -f5`)
+        fi
+        c=c+1
+    done < $file
+
+    local win1="YES"
+    local win2="YES"
+    local win3="YES"
+    local win4="YES"
+    local win5="YES"
+
+    for i in {0..4} ; do
+        if [ -z `echo ${column1[i]} | grep 'm'` ] ; then
+            win1="NO"
+        fi
+
+        if [ -z `echo ${column2[i]} | grep 'm'` ] ; then
+            win2="NO"
+        fi
+
+        if [ -z `echo ${column3[i]} | grep 'm'` ] ; then
+            win3="NO"
+        fi
+
+        if [ -z `echo ${column4[i]} | grep 'm'` ] ; then
+            win4="NO"
+        fi
+
+        if [ -z `echo ${column5[i]} | grep 'm'` ] ; then
+            win5="NO"
+        fi
+    done
+
+    if [ "$win1" = "YES" -o "$win2" = "YES" -o "$win3" = "YES" -o "$win4" = "YES" -o "$win5" = "YES" ] ; then
+        echo "WIN"
+    elif [ ! -z "`echo ${column1[0]} | grep 'm'`" -a ! -z "`echo ${column1[4]} | grep 'm'`" ] ; then
+        if [ ! -z "`echo ${column5[0]} | grep 'm'`" -a ! -z "`echo ${column5[4]} | grep 'm'`" ] ; then
+            echo "WIN"
+        fi
+    fi
+    #echo ${column1[@]} hey
+}
+
+
+
+#check card layout
+file="$1"
+
+if [ -z "$file" -o ! -f "$file" -o ! -r "$file" ] ; then
+    echo "input file missing or unreadable" >/dev/stderr
+    exit 1
+elif [ ! `wc -l "$file" | cut -d' ' -f1` = 6 ] ; then
+    echo "input file must have 6 lines" >/dev/stderr
+    exit 2
+elif [ -z "`head -1 $file | grep -v [A-Za-z]`" -o ! `head -1 "$file" | wc -w` = 1 ] ; then
+    echo "seed line format error" >/dev/stderr
+    exit 3
+fi
+
+typeset -i count=1
+formatted="YES"
+while read line; do
+    if [ `expr "$count" \>= 2` = 1 -a ! $count = 4 ] ; then
+        if [ ! ${#line} = 14 ] ; then
+            formatted="NO"
+        fi
+        if [ ! `echo $line | wc -w`=5 ] ; then
+            formatted="NO"
+        elif [ 0 = `echo $line | cut -d' ' -f1 | grep -E "0[1-9]|1[0-5]" | wc -l` ] ; then
+            formatted="NO"
+        elif [ 0 = `echo $line | cut -d' ' -f2 | grep -E "1[6-9]|2[0-9]|30" | wc -l` ] ; then
+            formatted="NO"
+        elif [ 0 = `echo $line | cut -d' ' -f3 | grep -E "3[1-9]|4[0-5]" | wc -l` ] ; then
+            formatted="NO"
+        elif [ 0 = `echo $line | cut -d' ' -f4 | grep -E "4[6-9]|5[0-9]|60" | wc -l` ] ; then
+            formatted="NO"
+        elif [ 0 = `echo $line | cut -d' ' -f5 | grep -E "6[1-9]|7[0-5]" | wc -l` ] ; then
+            formatted="NO"
+        fi
+    fi
+    if [ "`repeatChecker $file`" = "NO" ] ; then
+        formatted="NO"
+    fi
+    if [ $count = 4 ] ; then
+        if [ ! `echo $line | cut -d' ' -f3` = '00' ] ; then
+            formatted="NO"
+        fi
+    fi
+    if [ ! "`echo $line | tr -s " " " "`" = "$line" ] ; then
+        formatted="NO"
+    fi
+    count=count+1 
+done < "$file"
+
+if [ $formatted = "NO" ] ; then 
+    echo "card format error" >/dev/stderr
+    exit 4
+fi
+
+#main program
+
+update $file >> temp
+unset line
+unset count
+unset callList
+typeset -i count=1
+clear
+echo CALL LIST:
+cat temp
+echo -n "enter any key to get a call or q to quit: "
+declare -a callList
+RANDOM=`head -1 $file`
+win="NOT"
+
+while read input ; do
+    clear
+
+    if [ "$input" = 'q' ] ; then
+        rm temp
+        exit 0
+    fi
+
+    typeset -i call
+    passed="FALSE"
+    while [ "$passed" = "FALSE" ] ; do
+        call=$((1 + $RANDOM % 75))
+        passed="TRUE"
+        for i in ${callList[@]} ; do
+            if [ "`assignToLetter $call`" = "$i" ] ; then
+                passed="FALSE"
+            fi
+        done
+    done
+
+    callList=(${callList[@]} `assignToLetter $call`)
+    echo CALL LIST: ${callList[@]}
+
+    searchFor temp $call
+    cat temp
+
+    echo -n "enter any key to get a call or q to quit: "
+    if [ "`checkIfWinRows temp`" = "WIN" ] ; then
+        win="YES"
+    elif [ "`checkIfWinColumns temp`" = "WIN" ]; then
+        win="YES"
+    fi
+
+    
+    if [ "$win" = "YES" ] ; then
+        clear
+        echo CALL LIST: ${callList[@]}
+        cat temp
+        echo WINNER
+        rm temp
+        exit 0
+    fi
+done
+
+echo "done"
+exit 0
